@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Budsjett">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mitt budsjett</title>
+<style>
+:root{--bg:#f5f2ff;--card:#fff;--text:#1f1933;--muted:#746d86;--line:#e8e2f2;--good:#16805c;--bad:#d0445b;--accent:#6d4aff;--accent2:#9b78ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#efe9ff 0,#f8f6ff 230px,var(--bg) 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:88px}
+header{position:sticky;top:0;z-index:5;background:#f5f2fff0;backdrop-filter:blur(12px);padding:calc(14px + env(safe-area-inset-top)) 16px 10px}
+.top{display:flex;justify-content:space-between;align-items:center;max-width:720px;margin:auto}h1{font-size:25px;margin:0}
+select,input,textarea,button{font:inherit}.period{padding:10px;border:1px solid var(--line);border-radius:12px;background:white}
+main{max-width:720px;margin:auto;padding:8px 16px 24px}.screen{display:none}.screen.active{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{background:white;border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 10px 30px #4c2e8814;border:1px solid #ffffff}
+.label{font-size:13px;color:var(--muted)}.value{font-size:22px;font-weight:800;margin-top:5px}.good{color:var(--good)}.bad{color:var(--bad)}
+.btn{border:0;border-radius:14px;padding:13px 15px;font-weight:750}.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;box-shadow:0 8px 18px #6d4aff33}.secondary{background:#e5e7eb}.danger{background:#fee2e2;color:#991b1b}
+.full{width:100%;margin-bottom:14px}.section{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 10px}.section h2{font-size:18px;margin:0}
+.list{display:flex;flex-direction:column;gap:10px}.item{display:flex;justify-content:space-between;gap:12px;background:white;border:1px solid var(--line);border-radius:16px;padding:13px}.itemleft{display:flex;gap:11px;min-width:0}.cat-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:21px;background:#f0ecff;flex:0 0 auto}.itemtext{min-width:0}
+.ititle{font-weight:800}.meta{font-size:12px;color:var(--muted);margin-top:4px}.amount{font-weight:800;white-space:nowrap}.actions{display:flex;gap:7px;margin-top:8px}.mini{border:0;border-radius:9px;padding:7px 9px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.filters>*{width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:white}
+.empty{text-align:center;color:var(--muted);padding:24px}.chart{display:grid;grid-template-columns:145px 1fr;gap:14px;align-items:center}canvas{width:145px;height:145px}
+.legend{font-size:12px}.lrow{display:flex;justify-content:space-between;gap:8px;margin:7px 0}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff5;border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:10}
+.navin{display:grid;grid-template-columns:repeat(4,1fr);max-width:720px;margin:auto}.nav{border:0;background:transparent;color:var(--muted);font-size:11px;padding:6px}.nav b{display:grid;place-items:center;height:25px}.nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.nav.active{color:var(--accent);font-weight:800}
+.modal{display:none;position:fixed;inset:0;background:#11182788;z-index:20;align-items:flex-end;padding:16px}.modal.open{display:flex}.sheet{width:min(720px,100%);max-height:92vh;overflow:auto;background:white;border-radius:24px 24px 16px 16px;padding:18px;margin:auto}
+.sheethead{display:flex;justify-content:space-between;align-items:center}.sheethead h3{margin:0}.close{border:0;border-radius:50%;width:36px;height:36px;font-size:20px}
+.field{display:flex;flex-direction:column;gap:6px;margin:13px 0}.field label{font-size:13px;color:var(--muted);font-weight:700}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px}.field textarea{min-height:80px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.note{font-size:12px;color:var(--muted);line-height:1.45}
+</style>
+</head>
+<body>
+<header><div class="top"><h1 id="pageTitle">Hjem</h1><select id="periodSelect" class="period"></select></div></header>
+<main>
+<section id="home" class="screen active">
+<button class="btn primary full" onclick="openChooser()">✦ Ny føring</button>
+<div class="grid">
+<div class="card"><div class="label">Inntekter</div><div id="incomeMetric" class="value good"></div></div>
+<div class="card"><div class="label">Utgifter</div><div id="expenseMetric" class="value bad"></div></div>
+<div class="card"><div class="label">Spart</div><div id="savingMetric" class="value"></div></div>
+<div class="card"><div class="label">Disponibelt</div><div id="availableMetric" class="value"></div></div>
+</div>
+<div class="card"><div class="section"><h2>Utgiftsfordeling</h2></div><div class="chart"><canvas id="chart" width="300" height="300"></canvas><div id="legend" class="legend"></div></div></div>
+<div class="section"><h2>Siste 5 føringer</h2></div><div id="recent" class="list"></div>
+<div class="card"><div class="section"><h2>Sikkerhetskopi</h2></div><div class="row"><button class="btn secondary" onclick="exportData()">Eksporter</button><button class="btn secondary" onclick="importFile.click()">Importer</button><button class="btn danger" onclick="clearAll()">Slett alle data</button></div><input id="importFile" type="file" accept=".json" hidden><p class="note">Data lagres lokalt på iPhone. Eksporter sikkerhetskopi jevnlig.</p></div>
+</section>
+<section id="expenses" class="screen"><button class="btn primary full" onclick="openForm('expense')">+ Legg til utgift</button><div class="filters"><select id="expenseFilter"></select><input id="expenseSearch" placeholder="Søk"></div><div id="expensesList" class="list"></div></section>
+<section id="incomes" class="screen"><button class="btn primary full" onclick="openForm('income')">+ Legg til inntekt</button><div class="filters"><select id="incomeFilter"></select><input id="incomeSearch" placeholder="Søk"></div><div id="incomesList" class="list"></div></section>
+<section id="savings" class="screen"><button class="btn primary full" onclick="openForm('saving')">+ Legg til sparing</button><div id="savingSummary" class="card"></div><div id="savingsList" class="list"></div></section>
+</main>
+<nav><div class="navin">
+<button class="nav active" data-page="home"><b><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg></b>Hjem</button>
+<button class="nav" data-page="expenses"><b><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M7 7V5h10v2"/><path d="M8 12h8"/></svg></b>Utgifter</button>
+<button class="nav" data-page="incomes"><b><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></b>Inntekter</button>
+<button class="nav" data-page="savings"><b><svg viewBox="0 0 24 24"><path d="M5 9c0-3 3-5 7-5s7 2 7 5v7c0 2-2 4-5 4H9c-3 0-5-2-5-4v-5"/><path d="M8 10h8M12 7v6"/><circle cx="18.5" cy="11.5" r="1"/></svg></b>Sparing</button>
+</div></nav>
+
+<div id="chooser" class="modal"><div class="sheet"><div class="sheethead"><h3>Ny føring</h3><button class="close" onclick="closeModal('chooser')">×</button></div><div class="grid" style="margin-top:15px"><button class="btn primary" onclick="choose('expense')">Utgift</button><button class="btn primary" onclick="choose('income')">Inntekt</button></div><button class="btn secondary full" style="margin-top:12px" onclick="choose('saving')">Sparing</button></div></div>
+<div id="formModal" class="modal"><div class="sheet"><div class="sheethead"><h3 id="formHeading"></h3><button class="close" onclick="closeModal('formModal')">×</button></div>
+<form id="entryForm"><input id="entryId" type="hidden"><input id="entryType" type="hidden">
+<div class="field"><label>Tittel</label><input id="title" required maxlength="80"></div>
+<div id="categoryField" class="field"><label>Art</label><select id="category"></select></div>
+<div class="field"><label>Beløp</label><input id="amount" type="number" inputmode="decimal" step="0.01" min="0" required></div>
+<div class="field"><label>Dato</label><input id="date" type="date" required></div>
+<div class="field"><label>Periode</label><input id="entryPeriod" type="month" required></div>
+<div id="goalField" class="field" style="display:none"><label>Sparemål</label><input id="goal" placeholder="For eksempel Buffer"></div>
+<div class="field"><label>Kommentar</label><textarea id="comment"></textarea></div>
+<button class="btn primary full" type="submit">Lagre</button></form></div></div>
+
+<script>
+const expenseCats={"1000":"Husleie","1001":"Nedbetalingsavtaler","1002":"Mat","1003":"Strøm og andre driftsutgifter","1004":"Underholdning","1005":"Abonnementer","1006":"Spill","1007":"Kjøp av IT-utstyr (over 500 kr)","1008":"Tilbakebetaling av lån"};
+const incomeCats={"2000":"Månedslønn","2001":"Ekstra lønn","2002":"Lån","2003":"Refusjon","2004":"Tilbakebetaling av lån"};
+const catIcons={"1000":"🏠","1001":"🧾","1002":"🛒","1003":"💡","1004":"🎬","1005":"📱","1006":"🎮","1007":"💻","1008":"↩️","2000":"💼","2001":"✨","2002":"🤝","2003":"🧾","2004":"↪️",saving:"🐷"};
+const KEY="mittBudsjettV1";let db=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||{entries:[]}}catch{return{entries:[]}}})();if(!db.entries)db.entries=[];
+const $=id=>document.getElementById(id), nowPeriod=()=>new Date().toISOString().slice(0,7), today=()=>new Date().toISOString().slice(0,10);
+const money=n=>new Intl.NumberFormat("nb-NO",{style:"currency",currency:"NOK"}).format(Number(n||0));
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function save(){localStorage.setItem(KEY,JSON.stringify(db));refreshPeriods();render()}
+function refreshPeriods(){let cur=$("periodSelect").value||nowPeriod();let ps=[...new Set([nowPeriod(),...db.entries.map(x=>x.period)])].sort().reverse();$("periodSelect").innerHTML=ps.map(p=>`<option value="${p}">${new Date(p+"-01T12:00:00").toLocaleDateString("nb-NO",{month:"long",year:"numeric"})}</option>`).join("");$("periodSelect").value=ps.includes(cur)?cur:nowPeriod()}
+function fillFilters(){$("expenseFilter").innerHTML='<option value="">Alle utgiftsarter</option>'+Object.entries(expenseCats).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("");$("incomeFilter").innerHTML='<option value="">Alle inntektsarter</option>'+Object.entries(incomeCats).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("")}
+function page(p){document.querySelectorAll(".screen").forEach(x=>x.classList.toggle("active",x.id===p));document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.page===p));$("pageTitle").textContent={home:"Hjem",expenses:"Utgifter",incomes:"Inntekter",savings:"Sparing"}[p];scrollTo(0,0)}
+function openChooser(){$("chooser").classList.add("open")}function closeModal(id){$(id).classList.remove("open")}function choose(t){closeModal("chooser");openForm(t)}
+function openForm(type,id=""){entryForm.reset();$("entryType").value=type;$("entryId").value=id;$("categoryField").style.display=type==="saving"?"none":"flex";$("goalField").style.display=type==="saving"?"flex":"none";let cats=type==="expense"?expenseCats:incomeCats;$("category").innerHTML=Object.entries(cats).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("");$("formHeading").textContent=(id?"Rediger ":"Ny ")+({expense:"utgift",income:"inntekt",saving:"sparing"}[type]);$("date").value=today();$("entryPeriod").value=$("periodSelect").value||nowPeriod();if(id){let e=db.entries.find(x=>x.id===id);$("title").value=e.title;$("amount").value=e.amount;$("date").value=e.date;$("entryPeriod").value=e.period;$("comment").value=e.comment||"";$("goal").value=e.goal||"";if(e.category)$("category").value=e.category}$("formModal").classList.add("open")}
+entryForm.onsubmit=e=>{e.preventDefault();let type=$("entryType").value,obj={id:$("entryId").value||Date.now().toString(36)+Math.random().toString(36).slice(2),type,title:$("title").value.trim(),category:type==="saving"?"":$("category").value,amount:Number($("amount").value),date:$("date").value,period:$("entryPeriod").value,goal:type==="saving"?$("goal").value.trim():"",comment:$("comment").value.trim(),updated:new Date().toISOString()};let i=db.entries.findIndex(x=>x.id===obj.id);i>=0?db.entries[i]=obj:db.entries.push(obj);closeModal("formModal");save()}
+function del(id){if(confirm("Vil du slette denne føringen?")){db.entries=db.entries.filter(x=>x.id!==id);save()}}
+function item(e){let cats=e.type==="expense"?expenseCats:e.type==="income"?incomeCats:{};let sign=e.type==="expense"?"−":e.type==="income"?"+":"";let icon=e.type==="saving"?catIcons.saving:(catIcons[e.category]||"•");return `<div class="item"><div class="itemleft"><div class="cat-icon">${icon}</div><div class="itemtext"><div class="ititle">${esc(e.title)}</div><div class="meta">${e.date} · ${esc(e.category?e.category+" – "+cats[e.category]:e.goal||"Sparing")}</div>${e.comment?`<div class="meta">${esc(e.comment)}</div>`:""}<div class="actions"><button class="mini" onclick="openForm('${e.type}','${e.id}')">Rediger</button><button class="mini" onclick="del('${e.id}')">Slett</button></div></div></div><div class="amount ${e.type==="expense"?"bad":e.type==="income"?"good":""}">${sign}${money(e.amount)}</div></div>`}
+function selected(type){return db.entries.filter(x=>x.type===type&&x.period===$("periodSelect").value).sort((a,b)=>b.date.localeCompare(a.date)||b.updated.localeCompare(a.updated))}
+function render(){let p=$("periodSelect").value,all=db.entries.filter(x=>x.period===p),sum=t=>all.filter(x=>x.type===t).reduce((a,x)=>a+x.amount,0),inc=sum("income"),exp=sum("expense"),sav=sum("saving"),av=inc-exp-sav;$("incomeMetric").textContent=money(inc);$("expenseMetric").textContent=money(exp);$("savingMetric").textContent=money(sav);$("availableMetric").textContent=money(av);$("availableMetric").className="value "+(av<0?"bad":"good");let recent=[...all].sort((a,b)=>b.date.localeCompare(a.date)||b.updated.localeCompare(a.updated)).slice(0,5);$("recent").innerHTML=recent.length?recent.map(item).join(""):'<div class="card empty">Ingen føringer i perioden.</div>';
+let ex=selected("expense"),cf=$("expenseFilter").value,q=$("expenseSearch").value.toLowerCase();if(cf)ex=ex.filter(x=>x.category===cf);if(q)ex=ex.filter(x=>(x.title+" "+x.comment).toLowerCase().includes(q));$("expensesList").innerHTML=ex.length?ex.map(item).join(""):'<div class="card empty">Ingen utgifter.</div>';
+let inn=selected("income"),inf=$("incomeFilter").value,iq=$("incomeSearch").value.toLowerCase();if(inf)inn=inn.filter(x=>x.category===inf);if(iq)inn=inn.filter(x=>(x.title+" "+x.comment).toLowerCase().includes(iq));$("incomesList").innerHTML=inn.length?inn.map(item).join(""):'<div class="card empty">Ingen inntekter.</div>';
+let sl=selected("saving"),st=sl.reduce((a,x)=>a+x.amount,0),goals={};sl.forEach(x=>goals[x.goal||"Uten mål"]=(goals[x.goal||"Uten mål"]||0)+x.amount);$("savingSummary").innerHTML=`<div class="label">Spart i perioden</div><div class="value">${money(st)}</div>`+Object.entries(goals).map(([g,v])=>`<div class="lrow"><span>${esc(g)}</span><b>${money(v)}</b></div>`).join("");$("savingsList").innerHTML=sl.length?sl.map(item).join(""):'<div class="card empty">Ingen sparing.</div>';draw(all.filter(x=>x.type==="expense"))}
+function draw(list){let c=$("chart"),x=c.getContext("2d");x.clearRect(0,0,300,300);let t={};list.forEach(e=>t[e.category]=(t[e.category]||0)+e.amount);let rows=Object.entries(t).sort((a,b)=>b[1]-a[1]),total=rows.reduce((a,r)=>a+r[1],0),cols=["#111827","#334155","#475569","#64748b","#94a3b8","#0f766e","#0e7490","#7c3aed","#a16207"];if(!total){x.beginPath();x.arc(150,150,105,0,7);x.lineWidth=38;x.strokeStyle="#e5e7eb";x.stroke();$("legend").innerHTML="Ingen utgifter";return}let s=-Math.PI/2;rows.forEach((r,i)=>{let a=r[1]/total*Math.PI*2;x.beginPath();x.arc(150,150,105,s,s+a);x.lineWidth=38;x.strokeStyle=cols[i%cols.length];x.stroke();s+=a});x.fillStyle="#111827";x.textAlign="center";x.font="700 22px sans-serif";x.fillText(money(total).replace(",00",""),150,150);$("legend").innerHTML=rows.slice(0,6).map((r,i)=>`<div class="lrow"><span>${esc(expenseCats[r[0]])}</span><b>${Math.round(r[1]/total*100)} %</b></div>`).join("")}
+function exportData(){let blob=new Blob([JSON.stringify({version:1,exported:new Date().toISOString(),data:db},null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="budsjett-sikkerhetskopi-"+today()+".json";a.click()}
+importFile.onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let o=JSON.parse(r.result),d=o.data||o;if(!Array.isArray(d.entries))throw 0;if(confirm("Erstatte eksisterende data med sikkerhetskopien?")){db=d;save()}}catch{alert("Ugyldig sikkerhetskopi.")}};r.readAsText(f)}
+function clearAll(){if(confirm("Dette sletter alle data på enheten.")&&confirm("Er du helt sikker?")){db={entries:[]};localStorage.removeItem(KEY);refreshPeriods();render()}}
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>page(b.dataset.page));$("periodSelect").onchange=render;$("expenseFilter").onchange=render;$("incomeFilter").onchange=render;$("expenseSearch").oninput=render;$("incomeSearch").oninput=render;
+fillFilters();refreshPeriods();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+</script>
+</body></html>

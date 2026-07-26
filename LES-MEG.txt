@@ -1,0 +1,23 @@
+MITT BUDSJETT – VERSJON 1
+
+Appen inneholder:
+- Hjemside med nøkkeltall, ringdiagram og fem siste føringer
+- Utgifter med kategorier, søk, redigering og sletting
+- Inntekter med kategorier, søk, redigering og sletting
+- Sparing med valgfrie sparemål
+- Lokal lagring på enheten
+- Eksport og import av sikkerhetskopi
+- Offline-støtte etter installasjon
+
+INSTALLASJON PÅ IPHONE
+1. Publiser alle filene på en HTTPS-nettadresse, for eksempel GitHub Pages, Netlify eller Cloudflare Pages.
+2. Åpne nettadressen i Safari på iPhone.
+3. Trykk Del.
+4. Velg «Legg til på Hjem-skjermen».
+
+VIKTIG OM LAGRING
+Dataene lagres lokalt i Safari på iPhone. Ta sikkerhetskopi med Eksporter-knappen.
+Sikkerhetskopien kan lagres i Filer eller iCloud Drive.
+
+TESTING
+index.html kan åpnes direkte på PC for enkel testing. Installering og offline-støtte krever normalt HTTPS eller localhost.
