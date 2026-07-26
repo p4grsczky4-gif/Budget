@@ -1,25 +1,21 @@
-MITT BUDSJETT – VERSJON 1
+MITT BUDSJETT – VERSJON 4
 
-Appen inneholder:
-- Hjemside med nøkkeltall, ringdiagram og fem siste føringer
-- Utgifter med kategorier, søk, redigering og sletting
-- Inntekter med kategorier, søk, redigering og sletting
-- Sparing med valgfrie sparemål
-- Lokal lagring på enheten
-- Eksport og import av sikkerhetskopi
-- Offline-støtte etter installasjon
+Nytt:
+- Utgiftsartene 1009, 1010 og 1011
+- Inntektsartene 2005 og 2006
+- Automatisk overføring til neste periode
+- Koblet utgift 1009 og inntekt 2005
+- Angre/slett begge sider av en overføring samtidig
+- Utgiftsart 1010 oppretter også en koblet spareføring
+- Ny årsoversikt med månedstall og utgifter per art
+- Kompatibel med tidligere lagrede data fordi samme lagringsnøkkel brukes
 
-INSTALLASJON PÅ IPHONE
-1. Publiser alle filene på en HTTPS-nettadresse, for eksempel GitHub Pages, Netlify eller Cloudflare Pages.
-2. Åpne nettadressen i Safari på iPhone.
-3. Trykk Del.
-4. Velg «Legg til på Hjem-skjermen».
+Publisering på GitHub:
+1. Last opp og erstatt alle filene i repositoryets hovedmappe.
+2. Behold filnavnene nøyaktig som de er.
+3. Commit changes.
+4. Vent litt på GitHub Pages.
+5. På iPhone kan det være nødvendig å lukke appen helt eller fjerne og legge den til på Hjem-skjermen på nytt.
 
-VIKTIG OM LAGRING
-Dataene lagres lokalt i Safari på iPhone. Ta sikkerhetskopi med Eksporter-knappen.
-Sikkerhetskopien kan lagres i Filer eller iCloud Drive.
-
-TESTING
-index.html kan åpnes direkte på PC for enkel testing. Installering og offline-støtte krever normalt HTTPS eller localhost.
-
-Denne versjonen bruker filnavnet app-info.json i stedet for manifest.json.
+Data:
+Budsjettdata lagres lokalt på enheten, ikke i GitHub.
