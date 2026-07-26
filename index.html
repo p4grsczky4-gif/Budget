@@ -179,6 +179,23 @@
     <div class="field"><label for="date">Dato</label><input id="date" required type="date"></div>
     <div class="field"><label for="period">Periode</label><input id="period" required type="month"></div>
     <div class="field" id="goalField" style="display:none"><label for="goal">Sparemål</label><input id="goal" maxlength="60" placeholder="For eksempel Buffer"></div>
+    <div class="field" id="recurringField">
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span>Fast føring hver måned</span>
+        <input id="isRecurring" type="checkbox" style="width:auto;transform:scale(1.25)">
+      </label>
+      <div id="recurringOptions" style="display:none;margin-top:8px">
+        <div class="field">
+          <label for="recurringDay">Dag i måneden</label>
+          <input id="recurringDay" type="number" min="1" max="31" step="1">
+        </div>
+        <div class="field">
+          <label for="recurringEnd">Sluttperiode (valgfritt)</label>
+          <input id="recurringEnd" type="month">
+        </div>
+        <p class="note">Føringen opprettes automatisk når appen åpnes. Dersom måneden ikke har valgt dato, brukes månedens siste dag.</p>
+      </div>
+    </div>
     <div class="field"><label for="comment">Kommentar</label><textarea id="comment" maxlength="500"></textarea></div>
     <button class="btn btn-primary" style="width:100%" type="submit">Lagre</button>
   </form>
@@ -197,12 +214,19 @@
 const expenseCategories={
 "1000":"Husleie","1001":"Nedbetalingsavtaler","1002":"Mat","1003":"Strøm og andre driftsutgifter",
 "1004":"Underholdning","1005":"Abonnementer","1006":"Spill","1007":"Kjøp av IT-utstyr (over 500 kr)",
-"1008":"Tilbakebetaling av lån","1009":"Overføring til neste periode","1010":"Overføring til sparekonto","1011":"Annet","1012":"Transport","1013":"Bil"};
-const incomeCategories={"2000":"Månedslønn","2001":"Ekstra lønn","2002":"Lån","2003":"Refusjon","2004":"Tilbakebetaling av lån","2005":"Overført fra forrige periode","2006":"Annet"};
+"1008":"Tilbakebetaling av lån","1009":"Overføring til neste periode","1010":"Overføring til sparekonto",
+"1011":"Husholdningsutgifter","1012":"Kjøp av gave","1013":"Kjøp av klær",
+"1014":"Nødvendige utgifter (hvis ingen andre kategorier er ledige)","1015":"Fritekst","1016":"Annet"};
+const incomeCategories={
+"2000":"Månedslønn","2001":"Ekstra lønn","2002":"Lån","2003":"Refusjon",
+"2004":"Tilbakebetaling av lån","2005":"Overført fra forrige periode","2006":"Gave",
+"2007":"Salgsinntekter","2008":"Fritekst","2009":"Annet"};
+const expenseIcons={"1000":"🏠","1001":"📆","1002":"🛒","1003":"💡","1004":"🎬","1005":"🔁","1006":"🎮","1007":"💻","1008":"↩️","1009":"➡️","1010":"🐷","1011":"🧽","1012":"🎁","1013":"👕","1014":"🧾","1015":"✏️","1016":"📌"};
+const incomeIcons={"2000":"💼","2001":"💸","2002":"🤝","2003":"↩️","2004":"💰","2005":"📥","2006":"🎁","2007":"🛍️","2008":"✏️","2009":"📌"};
 const storeKey="budsjettAppDataV1";
 let data=loadData();
 
-function loadData(){try{const raw=localStorage.getItem(storeKey);const p=raw?JSON.parse(raw):{entries:[]};if(!p.entries)p.entries=[];return p}catch(e){return{entries:[]}}}
+function loadData(){try{const raw=localStorage.getItem(storeKey);const p=raw?JSON.parse(raw):{entries:[]};if(!p.entries)p.entries=[];if(!p.recurringRules)p.recurringRules=[];return p}catch(e){return{entries:[],recurringRules:[]}}}
 function saveData(){localStorage.setItem(storeKey,JSON.stringify(data));refreshPeriodsPreserve();renderAll()}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -218,26 +242,33 @@ function init(){
  globalPeriod.addEventListener("change",renderAll);yearSelect.addEventListener("change",renderYear);
  expenseCategoryFilter.addEventListener("change",renderExpenses);incomeCategoryFilter.addEventListener("change",renderIncome);
  expenseSearch.addEventListener("input",renderExpenses);incomeSearch.addEventListener("input",renderIncome);
- entryForm.addEventListener("submit",submitEntry);importFile.addEventListener("change",importBackup);
+ entryForm.addEventListener("submit",submitEntry);
+ isRecurring.addEventListener("change",()=>{recurringOptions.style.display=isRecurring.checked?"block":"none"});
+ importFile.addEventListener("change",importBackup);
  document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.screen)));
- renderAll();if("serviceWorker"in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+ ensureRecurringEntries();renderAll();if("serviceWorker"in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 }
 function fillPeriods(){globalPeriod.innerHTML="";const ps=new Set([currentPeriod(),...data.entries.map(e=>e.period)]);[...ps].filter(Boolean).sort().reverse().forEach(p=>globalPeriod.add(new Option(formatPeriod(p),p)))}
 function refreshPeriodsPreserve(){const selected=globalPeriod.value||currentPeriod();fillPeriods();globalPeriod.value=[...globalPeriod.options].some(o=>o.value===selected)?selected:currentPeriod();fillYears()}
 function fillYears(){const ys=new Set([new Date().getFullYear(),...data.entries.map(e=>Number((e.period||"").slice(0,4))).filter(Boolean)]);const old=yearSelect.value;yearSelect.innerHTML="";[...ys].sort((a,b)=>b-a).forEach(y=>yearSelect.add(new Option(y,y)));yearSelect.value=[...yearSelect.options].some(o=>o.value===old)?old:new Date().getFullYear()}
 function fillFilters(){
- expenseCategoryFilter.innerHTML='<option value="">Alle utgiftsarter</option>'+Object.entries(expenseCategories).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("");
- incomeCategoryFilter.innerHTML='<option value="">Alle inntektsarter</option>'+Object.entries(incomeCategories).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("");
+ expenseCategoryFilter.innerHTML='<option value="">Alle utgiftsarter</option>'+Object.entries(expenseCategories).map(([k,v])=>`<option value="${k}">${expenseIcons[k]||"•"} ${k} – ${v}</option>`).join("");
+ incomeCategoryFilter.innerHTML='<option value="">Alle inntektsarter</option>'+Object.entries(incomeCategories).map(([k,v])=>`<option value="${k}">${incomeIcons[k]||"•"} ${k} – ${v}</option>`).join("");
 }
 function navigate(screen){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===screen));document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.screen===screen));pageTitle.textContent={home:"Hjem",expenses:"Utgifter",income:"Inntekter",savings:"Sparing",year:"Årsoversikt"}[screen];window.scrollTo({top:0,behavior:"smooth"});if(screen==="year")renderYear()}
 function openEntryChooser(){chooserModal.classList.add("open")}function closeModal(id){document.getElementById(id).classList.remove("open")}function backdropClose(e,id){if(e.target.id===id)closeModal(id)}
 
 function openForm(type,editId=null){
  formTitle.textContent=editId?"Rediger føring":{expense:"Ny utgift",income:"Ny inntekt",saving:"Ny sparing"}[type];
- entryType.value=type;entryId.value=editId||"";categoryField.style.display=type==="saving"?"none":"flex";goalField.style.display=type==="saving"?"flex":"none";
- const cats=type==="expense"?expenseCategories:incomeCategories;category.innerHTML=Object.entries(cats).map(([k,v])=>`<option value="${k}">${k} – ${v}</option>`).join("");
- if(editId){const e=data.entries.find(x=>x.id===editId);if(!e)return;title.value=e.title;amount.value=e.amount;date.value=e.date;period.value=e.period;comment.value=e.comment||"";goal.value=e.goal||"";if(e.category)category.value=e.category}
- else{entryForm.reset();entryType.value=type;entryId.value="";date.value=today();period.value=globalPeriod.value||currentPeriod()}
+ entryType.value=type;entryId.value=editId||"";categoryField.style.display=type==="saving"?"none":"flex";goalField.style.display=type==="saving"?"flex":"none";recurringField.style.display=type==="saving"?"none":"flex";
+ const cats=type==="expense"?expenseCategories:incomeCategories;const icons=type==="expense"?expenseIcons:incomeIcons;category.innerHTML=Object.entries(cats).map(([k,v])=>`<option value="${k}">${icons[k]||"•"} ${k} – ${v}</option>`).join("");
+ if(editId){const e=data.entries.find(x=>x.id===editId);if(!e)return;title.value=e.title;amount.value=e.amount;date.value=e.date;period.value=e.period;comment.value=e.comment||"";goal.value=e.goal||"";if(e.category)category.value=e.category;
+ const rule=e.recurringRuleId?data.recurringRules.find(r=>r.id===e.recurringRuleId):null;
+ isRecurring.checked=!!rule;recurringOptions.style.display=rule?"block":"none";
+ recurringDay.value=rule?.day||Number((e.date||"").slice(8,10))||1;
+ recurringEnd.value=rule?.endPeriod||""}
+ else{entryForm.reset();entryType.value=type;entryId.value="";date.value=today();period.value=globalPeriod.value||currentPeriod();
+ isRecurring.checked=false;recurringOptions.style.display="none";recurringDay.value=Number(today().slice(8,10));recurringEnd.value=""}
  formModal.classList.add("open");
 }
 function submitEntry(ev){
@@ -246,15 +277,83 @@ function submitEntry(ev){
  if(old?.transferId){alert("Koblede periodeoverføringer må slettes og opprettes på nytt.");return}
  const e={id:entryId.value||uid(),type,title:title.value.trim(),category:type==="saving"?"":category.value,amount:Number(amount.value),date:date.value,period:period.value,goal:type==="saving"?goal.value.trim():"",comment:comment.value.trim(),updatedAt:new Date().toISOString()};
  if(!e.title||!(e.amount>=0)||!e.date||!e.period)return;
+
+ // Opprett eller oppdater regel for fast føring
+ let rule=null;
+ if(type!=="saving"&&isRecurring.checked){
+   const day=Math.min(31,Math.max(1,Number(recurringDay.value||e.date.slice(8,10)||1)));
+   const existingRuleId=old?.recurringRuleId;
+   rule=existingRuleId?data.recurringRules.find(r=>r.id===existingRuleId):null;
+   if(!rule){
+     rule={id:uid(),createdAt:new Date().toISOString()};
+     data.recurringRules.push(rule);
+   }
+   Object.assign(rule,{
+     type:e.type,title:e.title,category:e.category,amount:e.amount,comment:e.comment,
+     startPeriod:e.period,endPeriod:recurringEnd.value||"",day,active:true,updatedAt:new Date().toISOString()
+   });
+   e.recurringRuleId=rule.id;
+ }else if(old?.recurringRuleId){
+   const oldRule=data.recurringRules.find(r=>r.id===old.recurringRuleId);
+   if(oldRule)oldRule.active=false;
+ }
+
  const idx=data.entries.findIndex(x=>x.id===e.id);if(idx>=0)data.entries[idx]=e;else data.entries.push(e);
- if(type==="expense"&&e.category==="1010"){
+
+ if(type==="expense"&&e.category==="1010"&&!e.linkedSavingId){
    const linked={id:uid(),type:"saving",title:e.title,category:"",amount:e.amount,date:e.date,period:e.period,goal:e.comment||"Sparekonto",comment:"Opprettet automatisk fra utgiftsart 1010",linkedExpenseId:e.id,updatedAt:new Date().toISOString()};
    e.linkedSavingId=linked.id;data.entries.push(linked);
  }
+
+ ensureRecurringEntries();
  closeModal("formModal");saveData();
 }
+
+function daysInMonth(period){
+ const[y,m]=period.split("-").map(Number);
+ return new Date(y,m,0).getDate();
+}
+function addMonths(period,count){
+ const[y,m]=period.split("-").map(Number);
+ const d=new Date(y,m-1+count,1);
+ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function ruleDate(period,day){
+ const actual=Math.min(day,daysInMonth(period));
+ return `${period}-${String(actual).padStart(2,"0")}`;
+}
+function ensureRecurringEntries(){
+ if(!data.recurringRules)data.recurringRules=[];
+ const horizon=addMonths(currentPeriod(),24);
+ data.recurringRules.filter(r=>r.active!==false).forEach(r=>{
+   let p=r.startPeriod||currentPeriod();
+   const end=r.endPeriod&&r.endPeriod<horizon?r.endPeriod:horizon;
+   let guard=0;
+   while(p<=end&&guard<60){
+     const exists=data.entries.some(e=>e.recurringRuleId===r.id&&e.period===p);
+     if(!exists){
+       data.entries.push({
+         id:uid(),recurringRuleId:r.id,type:r.type,title:r.title,category:r.category,
+         amount:Number(r.amount||0),date:ruleDate(p,Number(r.day||1)),period:p,
+         goal:"",comment:r.comment||"",updatedAt:new Date().toISOString()
+       });
+     }
+     p=addMonths(p,1);guard++;
+   }
+ });
+}
+function deleteRecurringSeries(ruleId,fromPeriod){
+ const rule=data.recurringRules.find(r=>r.id===ruleId);
+ if(rule){rule.active=false;rule.endPeriod=addMonths(fromPeriod,-1)}
+ data.entries=data.entries.filter(e=>!(e.recurringRuleId===ruleId&&e.period>=fromPeriod));
+}
+
 function removeEntry(id){
  const e=data.entries.find(x=>x.id===id);if(!e)return;
+ if(e.recurringRuleId){
+   const choice=confirm("Dette er en fast føring. Trykk OK for å slette denne og alle framtidige føringer. Trykk Avbryt for å slette bare denne måneden.");
+   if(choice){deleteRecurringSeries(e.recurringRuleId,e.period);saveData();return}
+ }
  if(e.transferId){if(!confirm("Dette sletter begge sider av periodeoverføringen. Fortsette?"))return;data.entries=data.entries.filter(x=>x.transferId!==e.transferId)}
  else if(e.linkedSavingId||e.linkedExpenseId){if(!confirm("Dette sletter både utgiften og den koblede sparingen. Fortsette?"))return;const ids=new Set([e.id,e.linkedSavingId,e.linkedExpenseId].filter(Boolean));data.entries=data.entries.filter(x=>!ids.has(x.id)&&x.linkedExpenseId!==e.id&&x.linkedSavingId!==e.id)}
  else{if(!confirm("Vil du slette denne føringen?"))return;data.entries=data.entries.filter(x=>x.id!==id)}
@@ -263,9 +362,10 @@ function removeEntry(id){
 function itemHtml(e){
  const sign=e.type==="expense"?"−":e.type==="income"?"+":"";const cls=e.type==="expense"?"negative":e.type==="income"?"positive":"";
  const cats=e.type==="expense"?expenseCategories:e.type==="income"?incomeCategories:{};
- const meta=[e.date,e.category?`${e.category} – ${cats[e.category]||""}`:e.goal||"Sparing"].filter(Boolean).join(" · ");
+ const icons=e.type==="expense"?expenseIcons:e.type==="income"?incomeIcons:{};
+ const meta=[e.date,e.category?`${icons[e.category]||"•"} ${e.category} – ${cats[e.category]||""}`:e.goal||"Sparing"].filter(Boolean).join(" · ");
  const locked=e.transferId||e.linkedExpenseId;
- return `<div class="item"><div class="item-main"><div class="item-title">${esc(e.title)}</div><div class="item-meta">${esc(meta)}</div>${e.comment?`<div class="item-meta">${esc(e.comment)}</div>`:""}<div class="item-actions">${locked?"":`<button class="mini" onclick="openForm('${e.type}','${e.id}')">Rediger</button>`}<button class="mini" onclick="removeEntry('${e.id}')">Slett</button>${e.transferId?'<span class="status-pill">Koblet overføring</span>':""}</div></div><div class="item-amount ${cls}">${sign}${money(e.amount)}</div></div>`;
+ return `<div class="item"><div class="item-main"><div class="item-title">${esc(e.title)}</div><div class="item-meta">${esc(meta)}</div>${e.comment?`<div class="item-meta">${esc(e.comment)}</div>`:""}<div class="item-actions">${locked?"":`<button class="mini" onclick="openForm('${e.type}','${e.id}')">Rediger</button>`}<button class="mini" onclick="removeEntry('${e.id}')">Slett</button>${e.transferId?'<span class="status-pill">Koblet overføring</span>':""}${e.recurringRuleId?'<span class="status-pill">Fast</span>':""}</div></div><div class="item-amount ${cls}">${sign}${money(e.amount)}</div></div>`;
 }
 function entriesFor(type){const p=globalPeriod.value;return data.entries.filter(e=>e.type===type&&e.period===p).sort((a,b)=>b.date.localeCompare(a.date)||(b.updatedAt||"").localeCompare(a.updatedAt||""))}
 function sumsForPeriod(p){
@@ -291,7 +391,7 @@ function drawChart(expenses){
  if(!total){ctx.beginPath();ctx.arc(150,150,105,0,Math.PI*2);ctx.lineWidth=34;ctx.strokeStyle="#e7e3f5";ctx.stroke();chartLegend.innerHTML='<div class="empty">Ingen utgifter</div>';return}
  let start=-Math.PI/2;rows.forEach(([k,v],i)=>{const angle=v/total*Math.PI*2;ctx.beginPath();ctx.arc(150,150,105,start,start+angle);ctx.lineWidth=38;ctx.strokeStyle=colors[i%colors.length];ctx.stroke();start+=angle});
  ctx.fillStyle="#20213d";ctx.textAlign="center";ctx.font="700 22px -apple-system";ctx.fillText(money(total).replace(",00",""),150,145);ctx.fillStyle="#747693";ctx.font="14px -apple-system";ctx.fillText("utgifter",150,169);
- chartLegend.innerHTML=rows.slice(0,7).map(([k,v])=>`<div class="legend-row"><span>${esc(expenseCategories[k]||k)}</span><strong>${Math.round(v/total*100)} %</strong></div>`).join("");
+ chartLegend.innerHTML=rows.slice(0,7).map(([k,v])=>`<div class="legend-row"><span>${expenseIcons[k]||"•"} ${esc(expenseCategories[k]||k)}</span><strong>${Math.round(v/total*100)} %</strong></div>`).join("");
 }
 function openTransfer(max){
  const from=globalPeriod.value,to=nextPeriod(from);
@@ -321,7 +421,7 @@ function renderYear(){
  yIncome.textContent=money(ti);yExpense.textContent=money(te);ySaving.textContent=money(ts);const countedYearSaving=data.entries.filter(e=>(e.period||"").startsWith(String(y))&&e.type==="saving"&&!e.linkedExpenseId).reduce((a,e)=>a+Number(e.amount||0),0);
  const yr=ti-te-countedYearSaving;yResult.textContent=money(yr);yResult.className="metric-value "+(yr<0?"negative":"positive");
  yearRows.innerHTML=rows.map(r=>`<div class="year-row"><div>${formatPeriod(r.p).split(" ")[0]}</div><div>${money(r.income)}</div><div>${money(r.expense)}</div><div>${money(r.saving)}</div><div class="${r.result<0?"negative":"positive"}">${money(r.result)}</div></div>`).join("");
- const max=Math.max(1,...Object.values(cat));yearCategories.innerHTML=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin-bottom:12px"><div class="legend-row"><span>${esc(expenseCategories[k]||k)}</span><strong>${money(v)}</strong></div><div class="bar"><div style="width:${v/max*100}%"></div></div></div>`).join("")||'<div class="empty">Ingen utgifter registrert dette året.</div>';
+ const max=Math.max(1,...Object.values(cat));yearCategories.innerHTML=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin-bottom:12px"><div class="legend-row"><span>${expenseIcons[k]||"•"} ${esc(expenseCategories[k]||k)}</span><strong>${money(v)}</strong></div><div class="bar"><div style="width:${v/max*100}%"></div></div></div>`).join("")||'<div class="empty">Ingen utgifter registrert dette året.</div>';
 }
 
 function csvCell(value){const text=String(value??"").replace(/"/g,'""');return `"${text}"`;}
@@ -349,8 +449,8 @@ function exportCsv(scope){
 }
 
 function exportBackup(){const payload={app:"Mitt budsjett",version:4,exportedAt:new Date().toISOString(),data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`budsjett-sikkerhetskopi-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-function importBackup(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result),incoming=p.data||p;if(!Array.isArray(incoming.entries))throw 0;if(!confirm("Import vil erstatte dataene som ligger i appen nå. Fortsette?"))return;data=incoming;saveData();alert("Sikkerhetskopien er importert.")}catch(e){alert("Filen kunne ikke importeres.")}ev.target.value=""};r.readAsText(f)}
-function resetAll(){if(!confirm("Dette sletter alle registreringer på denne enheten. Fortsette?"))return;if(!confirm("Er du helt sikker?"))return;data={entries:[]};localStorage.removeItem(storeKey);refreshPeriodsPreserve();renderAll()}
+function importBackup(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result),incoming=p.data||p;if(!Array.isArray(incoming.entries))throw 0;if(!incoming.recurringRules)incoming.recurringRules=[];if(!confirm("Import vil erstatte dataene som ligger i appen nå. Fortsette?"))return;data=incoming;saveData();alert("Sikkerhetskopien er importert.")}catch(e){alert("Filen kunne ikke importeres.")}ev.target.value=""};r.readAsText(f)}
+function resetAll(){if(!confirm("Dette sletter alle registreringer på denne enheten. Fortsette?"))return;if(!confirm("Er du helt sikker?"))return;data={entries:[],recurringRules:[]};localStorage.removeItem(storeKey);refreshPeriodsPreserve();renderAll()}
 init();
 </script>
 </body>

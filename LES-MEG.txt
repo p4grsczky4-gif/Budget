@@ -1,4 +1,4 @@
-MITT BUDSJETT – VERSJON 6
+MITT BUDSJETT – VERSJON 8
 
 Nytt:
 - Utgiftsartene 1009, 1010 og 1011
@@ -32,3 +32,18 @@ Nytt i versjon 6:
 - 1012 – Transport
 - 1013 – Bil
 - Excel-kompatibel CSV-eksport for valgt periode eller alle perioder.
+
+
+Nytt i versjon 7:
+- Oppdatert inntektsarter 2000–2009.
+- Oppdatert utgiftsarter 1000–1016.
+- Emoji-ikoner i rullegardin, føringsliste, diagram og årsoversikt.
+
+
+Nytt i versjon 8:
+- Inntekter og utgifter kan markeres som faste.
+- Fast føring gjentas automatisk på samme dag hver måned.
+- Neste 24 måneder opprettes automatisk når appen åpnes.
+- Valgfri sluttperiode.
+- Dersom datoen ikke finnes i måneden, brukes månedens siste dag.
+- Fast-serie kan avsluttes fra valgt måned.
