@@ -1,4 +1,4 @@
-MITT BUDSJETT – VERSJON 9
+MITT BUDSJETT – VERSJON 10
 
 Nytt:
 - Utgiftsartene 1009, 1010 og 1011
@@ -57,3 +57,10 @@ Nytt i versjon 9:
 - 1020 – Flytting 📦
 - 1021 – Annet 📌
 - Faste føringer og Excel-eksport er beholdt.
+
+
+Nytt i versjon 10:
+- Mørk modus med knapp øverst i appen.
+- Valgt tema lagres lokalt på enheten.
+- Første gang følger appen lys/mørk-innstillingen på enheten.
+- Diagrammer, skjemaer, navigasjon og kort tilpasses mørk modus.
