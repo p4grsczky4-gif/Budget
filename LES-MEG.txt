@@ -21,3 +21,5 @@ Sikkerhetskopien kan lagres i Filer eller iCloud Drive.
 
 TESTING
 index.html kan åpnes direkte på PC for enkel testing. Installering og offline-støtte krever normalt HTTPS eller localhost.
+
+Denne versjonen bruker filnavnet app-info.json i stedet for manifest.json.
