@@ -1,4 +1,4 @@
-MITT BUDSJETT – VERSJON 5
+MITT BUDSJETT – VERSJON 6
 
 Nytt:
 - Utgiftsartene 1009, 1010 og 1011
@@ -26,3 +26,9 @@ Rettet i versjon 5:
 - Neste måned foreslås automatisk.
 - Samme eller tidligere periode avvises.
 - Overføring til sparekonto trekkes ikke dobbelt fra disponibelt beløp.
+
+
+Nytt i versjon 6:
+- 1012 – Transport
+- 1013 – Bil
+- Excel-kompatibel CSV-eksport for valgt periode eller alle perioder.

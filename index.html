@@ -104,7 +104,9 @@
   <div class="card" style="margin-top:14px">
     <div class="section-title"><h2>Sikkerhetskopi</h2></div>
     <div class="settings-row">
-      <button class="btn btn-secondary" onclick="exportBackup()">Eksporter</button>
+      <button class="btn btn-secondary" onclick="exportBackup()">Sikkerhetskopi</button>
+      <button class="btn btn-secondary" onclick="exportCsv('period')">Excel – valgt periode</button>
+      <button class="btn btn-secondary" onclick="exportCsv('all')">Excel – alle perioder</button>
       <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Importer</button>
       <input id="importFile" type="file" accept=".json,application/json" hidden>
       <button class="btn btn-danger" onclick="resetAll()">Slett alle data</button>
@@ -195,7 +197,7 @@
 const expenseCategories={
 "1000":"Husleie","1001":"Nedbetalingsavtaler","1002":"Mat","1003":"Strøm og andre driftsutgifter",
 "1004":"Underholdning","1005":"Abonnementer","1006":"Spill","1007":"Kjøp av IT-utstyr (over 500 kr)",
-"1008":"Tilbakebetaling av lån","1009":"Overføring til neste periode","1010":"Overføring til sparekonto","1011":"Annet"};
+"1008":"Tilbakebetaling av lån","1009":"Overføring til neste periode","1010":"Overføring til sparekonto","1011":"Annet","1012":"Transport","1013":"Bil"};
 const incomeCategories={"2000":"Månedslønn","2001":"Ekstra lønn","2002":"Lån","2003":"Refusjon","2004":"Tilbakebetaling av lån","2005":"Overført fra forrige periode","2006":"Annet"};
 const storeKey="budsjettAppDataV1";
 let data=loadData();
@@ -321,6 +323,31 @@ function renderYear(){
  yearRows.innerHTML=rows.map(r=>`<div class="year-row"><div>${formatPeriod(r.p).split(" ")[0]}</div><div>${money(r.income)}</div><div>${money(r.expense)}</div><div>${money(r.saving)}</div><div class="${r.result<0?"negative":"positive"}">${money(r.result)}</div></div>`).join("");
  const max=Math.max(1,...Object.values(cat));yearCategories.innerHTML=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin-bottom:12px"><div class="legend-row"><span>${esc(expenseCategories[k]||k)}</span><strong>${money(v)}</strong></div><div class="bar"><div style="width:${v/max*100}%"></div></div></div>`).join("")||'<div class="empty">Ingen utgifter registrert dette året.</div>';
 }
+
+function csvCell(value){const text=String(value??"").replace(/"/g,'""');return `"${text}"`;}
+function exportCsv(scope){
+ const selectedPeriod=globalPeriod.value;
+ let rows=data.entries.filter(e=>scope==="all"||e.period===selectedPeriod);
+ rows=[...rows].sort((a,b)=>(a.period||"").localeCompare(b.period||"")||(a.date||"").localeCompare(b.date||""));
+ const headers=["Periode","Bilagsdato","Tittel","Beløp","Type","Konto","Art","Kommentar"];
+ const typeNames={income:"Inntekt",expense:"Utgift",saving:"Sparing"};
+ const lines=[headers.map(csvCell).join(";")];
+ rows.forEach(e=>{
+   const cats=e.type==="expense"?expenseCategories:e.type==="income"?incomeCategories:{};
+   lines.push([
+     e.period||"",e.date||"",e.title||"",
+     Number(e.amount||0).toFixed(2).replace(".",","),
+     typeNames[e.type]||e.type||"",e.category||"",
+     e.category?(cats[e.category]||""):(e.goal||""),e.comment||""
+   ].map(csvCell).join(";"));
+ });
+ const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download=scope==="all"?`budsjettoversikt-alle-perioder-${today()}.csv`:`budsjettoversikt-${selectedPeriod}.csv`;
+ a.click();URL.revokeObjectURL(a.href);
+}
+
 function exportBackup(){const payload={app:"Mitt budsjett",version:4,exportedAt:new Date().toISOString(),data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`budsjett-sikkerhetskopi-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importBackup(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result),incoming=p.data||p;if(!Array.isArray(incoming.entries))throw 0;if(!confirm("Import vil erstatte dataene som ligger i appen nå. Fortsette?"))return;data=incoming;saveData();alert("Sikkerhetskopien er importert.")}catch(e){alert("Filen kunne ikke importeres.")}ev.target.value=""};r.readAsText(f)}
 function resetAll(){if(!confirm("Dette sletter alle registreringer på denne enheten. Fortsette?"))return;if(!confirm("Er du helt sikker?"))return;data={entries:[]};localStorage.removeItem(storeKey);refreshPeriodsPreserve();renderAll()}
