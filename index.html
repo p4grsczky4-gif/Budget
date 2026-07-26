@@ -185,9 +185,9 @@
 <div id="transferModal" class="modal" onclick="backdropClose(event,'transferModal')"><div class="sheet">
   <div class="sheet-head"><h3>Overfør til neste periode</h3><button class="close" onclick="closeModal('transferModal')">×</button></div>
   <div class="field"><label>Fra periode</label><input id="transferFrom" readonly></div>
-  <div class="field"><label>Til periode</label><input id="transferTo" readonly></div>
+  <div class="field"><label>Til periode</label><input id="transferTo" type="month"></div>
   <div class="field"><label>Beløp</label><input id="transferAmount" type="number" min="0" step="0.01"></div>
-  <p class="note">Appen oppretter en koblet utgift i gammel periode og inntekt i neste periode.</p>
+  <p class="note">Neste måned foreslås automatisk, men du kan velge en annen framtidig periode. Appen oppretter en koblet utgift i gammel periode og inntekt i valgt periode.</p>
   <button class="btn btn-primary" style="width:100%" onclick="createTransfer()">Gjennomfør overføring</button>
 </div></div>
 
@@ -267,8 +267,10 @@ function itemHtml(e){
 }
 function entriesFor(type){const p=globalPeriod.value;return data.entries.filter(e=>e.type===type&&e.period===p).sort((a,b)=>b.date.localeCompare(a.date)||(b.updatedAt||"").localeCompare(a.updatedAt||""))}
 function sumsForPeriod(p){
- const list=data.entries.filter(e=>e.period===p);const sum=t=>list.filter(e=>e.type===t).reduce((a,e)=>a+Number(e.amount||0),0);
- return{income:sum("income"),expense:sum("expense"),saving:sum("saving"),list}
+ const list=data.entries.filter(e=>e.period===p);
+ const sum=t=>list.filter(e=>e.type===t).reduce((a,e)=>a+Number(e.amount||0),0);
+ const countedSavings=list.filter(e=>e.type==="saving"&&!e.linkedExpenseId).reduce((a,e)=>a+Number(e.amount||0),0);
+ return{income:sum("income"),expense:sum("expense"),saving:countedSavings,displaySaving:sum("saving"),list}
 }
 function renderAll(){renderHome();renderExpenses();renderIncome();renderSavings();renderYear()}
 function renderHome(){
@@ -289,9 +291,19 @@ function drawChart(expenses){
  ctx.fillStyle="#20213d";ctx.textAlign="center";ctx.font="700 22px -apple-system";ctx.fillText(money(total).replace(",00",""),150,145);ctx.fillStyle="#747693";ctx.font="14px -apple-system";ctx.fillText("utgifter",150,169);
  chartLegend.innerHTML=rows.slice(0,7).map(([k,v])=>`<div class="legend-row"><span>${esc(expenseCategories[k]||k)}</span><strong>${Math.round(v/total*100)} %</strong></div>`).join("");
 }
-function openTransfer(max){const from=globalPeriod.value,to=nextPeriod(from);transferFrom.value=formatPeriod(from);transferFrom.dataset.period=from;transferTo.value=formatPeriod(to);transferTo.dataset.period=to;transferAmount.value=max.toFixed(2);transferModal.classList.add("open")}
+function openTransfer(max){
+ const from=globalPeriod.value,to=nextPeriod(from);
+ transferFrom.value=formatPeriod(from);
+ transferFrom.dataset.period=from;
+ transferTo.value=to;
+ transferTo.min=nextPeriod(from);
+ transferAmount.value=max.toFixed(2);
+ transferModal.classList.add("open")
+}
 function createTransfer(){
- const from=transferFrom.dataset.period,to=transferTo.dataset.period,val=Number(transferAmount.value||0),available=sumsForPeriod(from).income-sumsForPeriod(from).expense-sumsForPeriod(from).saving;
+ const from=transferFrom.dataset.period,to=transferTo.value,val=Number(transferAmount.value||0),available=sumsForPeriod(from).income-sumsForPeriod(from).expense-sumsForPeriod(from).saving;
+ if(!to){alert("Velg perioden beløpet skal overføres til.");return}
+ if(to<=from){alert("Målperioden må være senere enn perioden du overfører fra.");return}
  if(!(val>0)||val>available){alert("Beløpet må være større enn 0 og kan ikke overstige disponibelt beløp.");return}
  if(data.entries.some(e=>e.transferId&&e.period===from&&e.category==="1009")){alert("Det finnes allerede en overføring fra denne perioden.");return}
  const tid=uid(),d=today();
@@ -301,8 +313,11 @@ function createTransfer(){
 }
 function renderYear(){
  const y=Number(yearSelect.value||new Date().getFullYear());let ti=0,te=0,ts=0;const rows=[];const cat={};
- for(let m=1;m<=12;m++){const p=`${y}-${String(m).padStart(2,"0")}`,s=sumsForPeriod(p);ti+=s.income;te+=s.expense;ts+=s.saving;s.list.filter(e=>e.type==="expense"&&!["1009","1010"].includes(e.category)).forEach(e=>cat[e.category]=(cat[e.category]||0)+Number(e.amount||0));rows.push({p,...s,result:s.income-s.expense-s.saving})}
- yIncome.textContent=money(ti);yExpense.textContent=money(te);ySaving.textContent=money(ts);const yr=ti-te-ts;yResult.textContent=money(yr);yResult.className="metric-value "+(yr<0?"negative":"positive");
+ for(let m=1;m<=12;m++){const p=`${y}-${String(m).padStart(2,"0")}`,s=sumsForPeriod(p);
+ const shownSaving=data.entries.filter(e=>e.period===p&&e.type==="saving").reduce((a,e)=>a+Number(e.amount||0),0);
+ ti+=s.income;te+=s.expense;ts+=shownSaving;s.list.filter(e=>e.type==="expense"&&!["1009","1010"].includes(e.category)).forEach(e=>cat[e.category]=(cat[e.category]||0)+Number(e.amount||0));rows.push({p,...s,saving:shownSaving,result:s.income-s.expense-s.saving})}
+ yIncome.textContent=money(ti);yExpense.textContent=money(te);ySaving.textContent=money(ts);const countedYearSaving=data.entries.filter(e=>(e.period||"").startsWith(String(y))&&e.type==="saving"&&!e.linkedExpenseId).reduce((a,e)=>a+Number(e.amount||0),0);
+ const yr=ti-te-countedYearSaving;yResult.textContent=money(yr);yResult.className="metric-value "+(yr<0?"negative":"positive");
  yearRows.innerHTML=rows.map(r=>`<div class="year-row"><div>${formatPeriod(r.p).split(" ")[0]}</div><div>${money(r.income)}</div><div>${money(r.expense)}</div><div>${money(r.saving)}</div><div class="${r.result<0?"negative":"positive"}">${money(r.result)}</div></div>`).join("");
  const max=Math.max(1,...Object.values(cat));yearCategories.innerHTML=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin-bottom:12px"><div class="legend-row"><span>${esc(expenseCategories[k]||k)}</span><strong>${money(v)}</strong></div><div class="bar"><div style="width:${v/max*100}%"></div></div></div>`).join("")||'<div class="empty">Ingen utgifter registrert dette året.</div>';
 }

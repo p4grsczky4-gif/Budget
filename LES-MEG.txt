@@ -1,4 +1,4 @@
-MITT BUDSJETT – VERSJON 4
+MITT BUDSJETT – VERSJON 5
 
 Nytt:
 - Utgiftsartene 1009, 1010 og 1011
@@ -19,3 +19,10 @@ Publisering på GitHub:
 
 Data:
 Budsjettdata lagres lokalt på enheten, ikke i GitHub.
+
+
+Rettet i versjon 5:
+- Du kan velge hvilken framtidig periode en periodeoverføring skal føres til.
+- Neste måned foreslås automatisk.
+- Samme eller tidligere periode avvises.
+- Overføring til sparekonto trekkes ikke dobbelt fra disponibelt beløp.
