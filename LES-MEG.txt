@@ -1,4 +1,4 @@
-MITT BUDSJETT – VERSJON 8
+MITT BUDSJETT – VERSJON 9
 
 Nytt:
 - Utgiftsartene 1009, 1010 og 1011
@@ -47,3 +47,13 @@ Nytt i versjon 8:
 - Valgfri sluttperiode.
 - Dersom datoen ikke finnes i måneden, brukes månedens siste dag.
 - Fast-serie kan avsluttes fra valgt måned.
+
+
+Nytt i versjon 9:
+- 1016 – Transport 🚌
+- 1017 – Bil 🚗
+- 1018 – Prosjekt 🛠️
+- 1019 – Ferie 🏖️
+- 1020 – Flytting 📦
+- 1021 – Annet 📌
+- Faste føringer og Excel-eksport er beholdt.
